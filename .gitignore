@@ -26,3 +26,6 @@ temp/
 # Fichiers générés
 package-lock.json
 yarn.lock
+
+# État local de l'intégration Kerrigan's Eyes
+data/

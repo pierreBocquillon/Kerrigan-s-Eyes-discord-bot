@@ -1,46 +1,73 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
-require('dotenv').config();
+const express = require('express')
+const { Client, GatewayIntentBits, REST, Routes, MessageFlags } = require('discord.js')
+require('dotenv').config()
+
+const kerrigan = require('./ke')
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-});
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+})
 
-// Définir les commandes slash
-const commands = [
-  new SlashCommandBuilder().setName('ping').setDescription('Renvoie Pong!'),
-  new SlashCommandBuilder().setName('coin').setDescription('Pile ou Face aléatoire'),
-].map(command => command.toJSON());
+// Intégration Kerrigan's Eyes (optionnelle : active seulement si KE_URL est défini dans .env)
+const ke = kerrigan.setup(client)
 
-// Enregistrer les commandes
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
+const app = express()
+const PORT = process.env.PORT || 3000
+app.get('/', (_, res) => res.send('🤖 Bot Discord actif'))
+ke.mountWebhook(app) // POST /webhooks/ke : évènements envoyés par Kerrigan's Eyes
+app.listen(PORT, () => console.log(`🌐 Serveur HTTP sur le port ${PORT}`))
 
-(async () => {
+// la liste envoyée à Discord remplace l'ancienne : /ping, /coin et /pill disparaissent du serveur
+const commands = ke.commands.map(c => c.toJSON())
+
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
+
+;(async () => {
   try {
-    console.log('Enregistrement des commandes slash...');
-
-    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-
-    console.log('Commandes enregistrées avec succès.');
+    if(process.env.GUILD_ID) {
+      console.log('🔄 Enregistrement des commandes slash local...')
+      await rest.put(
+        Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+        { body: commands }
+      )
+      console.log('✅ Commandes enregistrées en local avec succès')
+    }else{
+      console.log('🔄 Enregistrement des commandes slash global...')
+      await rest.put(
+        Routes.applicationCommands(process.env.CLIENT_ID),
+        { body: commands }
+      )
+      console.log('✅ Commandes enregistrées en global avec succès')
+    }
   } catch (error) {
-    console.error(error);
+    console.error('❌ Erreur lors de l\'enregistrement des commandes :', error)
   }
-})();
+})()
+
+async function replyError (interaction) {
+  const payload = { content: '❌ Une erreur est survenue.', flags: MessageFlags.Ephemeral }
+  try {
+    if (interaction.deferred || interaction.replied) await interaction.followUp(payload)
+    else await interaction.reply(payload)
+  } catch (e) {
+    console.error(e)
+  }
+}
 
 client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
+  if (!interaction.isChatInputCommand()) return
 
-  if (interaction.commandName === 'ping') {
-    await interaction.reply('Pong!');
+  try {
+    await ke.handleCommand(interaction)
+  } catch (error) {
+    console.error(error)
+    await replyError(interaction)
   }
-
-  if (interaction.commandName === 'coin') {
-    const result = Math.random() < 0.5 ? 'Pile 🪙' : 'Face 🪙';
-    await interaction.reply(result);
-  }
-});
+})
 
 client.once('ready', () => {
-  console.log('🤖 Bot Discord actif et prêt !');
-});
+  console.log(`🤖 Connecté en tant que ${client.user.tag}`)
+  ke.start()
+})
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+client.login(process.env.DISCORD_BOT_TOKEN)

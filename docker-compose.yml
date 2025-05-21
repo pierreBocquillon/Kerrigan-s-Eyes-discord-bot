@@ -1,0 +1,29 @@
+services:
+  bot:
+    build: .
+    container_name: kerrigan-eyes-bot
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      - PORT=${PORT:-3000}
+      # messages "session terminée" de l'intégration Kerrigan's Eyes (mis à jour à la fin du post-traitement)
+      - KE_STATE_FILE=/app/data/ke-messages.json
+    # le port reçoit aussi les webhooks de Kerrigan's Eyes (POST /webhooks/ke)
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    # permet de joindre Kerrigan's Eyes lancé sur la même machine : KE_URL=http://host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ke-bot-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:$${PORT}/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  ke-bot-data:
