@@ -1,4 +1,4 @@
-// Récepteur des webhooks de Kerrigan's Eyes : POST JSON signé (HMAC-SHA256 de "<timestamp>.<corps>").
+// Receiver of the Kerrigan's Eyes webhooks: signed JSON POST (HMAC-SHA256 of "<timestamp>.<body>").
 const crypto = require('crypto')
 const express = require('express')
 
@@ -15,15 +15,15 @@ function verify (secret, req) {
 }
 
 function mountWebhook (app, cfg, notifier) {
-  const seen = new Set() // livraisons déjà traitées (KE renvoie le même id en cas de nouvel essai)
+  const seen = new Set() // deliveries already handled (KE sends the same id when it retries)
   app.post(cfg.webhookPath, express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
-    if (!cfg.webhookSecret) return res.status(503).json({ error: 'KE_WEBHOOK_SECRET non configuré sur le bot' })
-    if (!Buffer.isBuffer(req.body) || !verify(cfg.webhookSecret, req)) return res.status(401).json({ error: 'signature invalide' })
+    if (!cfg.webhookSecret) return res.status(503).json({ error: 'KE_WEBHOOK_SECRET is not set on the bot' })
+    if (!Buffer.isBuffer(req.body) || !verify(cfg.webhookSecret, req)) return res.status(401).json({ error: 'invalid signature' })
     let payload
     try {
       payload = JSON.parse(req.body.toString('utf8'))
     } catch {
-      return res.status(400).json({ error: 'JSON invalide' })
+      return res.status(400).json({ error: 'invalid JSON' })
     }
     const id = req.get('x-ke-delivery') || payload.id
     if (id && seen.has(id)) return res.json({ ok: true, duplicate: true })
@@ -33,11 +33,11 @@ function mountWebhook (app, cfg, notifier) {
         seen.add(id)
         if (seen.size > 1000) seen.delete(seen.values().next().value)
       }
-      console.log(`[KE] webhook ${payload.event}${handled ? '' : ' (ignoré)'}`)
+      console.log(`[KE] webhook ${payload.event}${handled ? '' : ' (ignored)'}`)
       res.json({ ok: true, handled })
     } catch (err) {
-      console.error(`[KE] webhook ${payload.event} : ${err.message}`)
-      res.status(502).json({ error: err.message }) // KE réessaiera
+      console.error(`[KE] webhook ${payload.event}: ${err.message}`)
+      res.status(502).json({ error: err.message }) // KE will retry
     }
   })
 }

@@ -1,31 +1,31 @@
 # Node.js dependencies
 node_modules/
 
-# Variables d'environnement
+# Environment variables
 .env
 
-# Fichiers de debug et logs
+# Debug files and logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Fichiers systèmes Mac et Windows
+# Mac and Windows system files
 .DS_Store
 Thumbs.db
 
-# Dossiers de build ou temporaires
+# Build or temporary folders
 dist/
 build/
 temp/
 
-# IDEs spécifiques
+# IDE files
 .vscode/
 .idea/
 *.iml
 
-# Fichiers générés
+# Generated files
 package-lock.json
 yarn.lock
 
-# État local de l'intégration Kerrigan's Eyes
+# Local data
 data/

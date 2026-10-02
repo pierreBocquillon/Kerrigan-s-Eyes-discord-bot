@@ -8,44 +8,44 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 })
 
-// Intégration Kerrigan's Eyes (optionnelle : active seulement si KE_URL est défini dans .env)
+// Kerrigan's Eyes integration (optional: only enabled when KE_URL is set in .env)
 const ke = kerrigan.setup(client)
 
 const app = express()
 const PORT = process.env.PORT || 3000
-app.get('/', (_, res) => res.send('🤖 Bot Discord actif'))
-ke.mountWebhook(app) // POST /webhooks/ke : évènements envoyés par Kerrigan's Eyes
-app.listen(PORT, () => console.log(`🌐 Serveur HTTP sur le port ${PORT}`))
+app.get('/', (_, res) => res.send('🤖 Discord bot is running'))
+ke.mountWebhook(app) // POST /webhooks/ke (or KE_WEBHOOK_PATH): events sent by Kerrigan's Eyes
+app.listen(PORT, () => console.log(`🌐 HTTP server listening on port ${PORT}`))
 
-// la liste envoyée à Discord remplace l'ancienne : /ping, /coin et /pill disparaissent du serveur
+// this list replaces the commands previously registered on Discord
 const commands = ke.commands.map(c => c.toJSON())
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 
 ;(async () => {
   try {
-    if(process.env.GUILD_ID) {
-      console.log('🔄 Enregistrement des commandes slash local...')
+    if (process.env.GUILD_ID) {
+      console.log('🔄 Registering slash commands for the server...')
       await rest.put(
         Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
         { body: commands }
       )
-      console.log('✅ Commandes enregistrées en local avec succès')
-    }else{
-      console.log('🔄 Enregistrement des commandes slash global...')
+      console.log('✅ Slash commands registered for the server')
+    } else {
+      console.log('🔄 Registering global slash commands...')
       await rest.put(
         Routes.applicationCommands(process.env.CLIENT_ID),
         { body: commands }
       )
-      console.log('✅ Commandes enregistrées en global avec succès')
+      console.log('✅ Global slash commands registered')
     }
   } catch (error) {
-    console.error('❌ Erreur lors de l\'enregistrement des commandes :', error)
+    console.error('❌ Could not register the slash commands:', error)
   }
 })()
 
 async function replyError (interaction) {
-  const payload = { content: '❌ Une erreur est survenue.', flags: MessageFlags.Ephemeral }
+  const payload = { content: '❌ Something went wrong.', flags: MessageFlags.Ephemeral }
   try {
     if (interaction.deferred || interaction.replied) await interaction.followUp(payload)
     else await interaction.reply(payload)
@@ -66,7 +66,7 @@ client.on('interactionCreate', async interaction => {
 })
 
 client.once('ready', () => {
-  console.log(`🤖 Connecté en tant que ${client.user.tag}`)
+  console.log(`🤖 Logged in as ${client.user.tag}`)
   ke.start()
 })
 

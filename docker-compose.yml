@@ -8,10 +8,10 @@ services:
       - .env
     environment:
       - PORT=${PORT:-3000}
-    # le port reçoit aussi les webhooks de Kerrigan's Eyes (POST /webhooks/ke)
+    # this port also receives the Kerrigan's Eyes webhooks (POST /webhooks/ke)
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
-    # permet de joindre Kerrigan's Eyes lancé sur la même machine : KE_URL=http://host.docker.internal:8080
+    # lets the bot reach Kerrigan's Eyes running on the same machine: KE_URL=http://host.docker.internal:8080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

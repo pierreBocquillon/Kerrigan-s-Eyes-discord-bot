@@ -1,5 +1,5 @@
-// Client HTTP de l'API Kerrigan's Eyes (le bot se connecte avec un compte KE, comme l'interface web).
-// Un compte "guest" suffit : l'état du labo, les sessions et les exports sont en lecture pour les invités.
+// HTTP client of the Kerrigan's Eyes API (the bot signs in with a KE account, like the web interface).
+// A "guest" account is enough: the lab state and the sessions are readable by guests.
 
 const COOKIE = 'ke_session'
 
@@ -24,7 +24,7 @@ class KEClient {
 
   async login () {
     if (this.staticToken) return
-    if (!this.username || !this.password) throw new Error('KE_USERNAME / KE_PASSWORD manquants')
+    if (!this.username || !this.password) throw new Error('KE_USERNAME / KE_PASSWORD are not set')
     if (!this._loggingIn) {
       this._loggingIn = (async () => {
         const res = await fetch(`${this.baseUrl}/api/auth/login`, {
@@ -38,7 +38,7 @@ class KEClient {
           ? res.headers.getSetCookie()
           : [res.headers.get('set-cookie') || '']
         const found = cookies.map(c => c.match(new RegExp(`${COOKIE}=([^;]+)`))).find(Boolean)
-        if (!found) throw new Error('Connexion KE : cookie de session absent de la réponse')
+        if (!found) throw new Error('KE sign-in: no session cookie in the answer')
         this.token = found[1]
       })().finally(() => { this._loggingIn = null })
     }
@@ -52,7 +52,7 @@ class KEClient {
       signal: AbortSignal.timeout(timeoutMs || this.timeoutMs)
     })
     if (res.status === 401 && retry && !this.staticToken) {
-      this.token = null // session expirée ou révoquée : on se reconnecte une fois
+      this.token = null // session expired or revoked: sign in again, once
       return this._fetch(path, { timeoutMs }, false)
     }
     if (!res.ok) throw new KEError(res.status, await detailOf(res))
@@ -67,7 +67,6 @@ class KEClient {
   state () {
     return this.json('/api/state')
   }
-
 }
 
 async function detailOf (res) {

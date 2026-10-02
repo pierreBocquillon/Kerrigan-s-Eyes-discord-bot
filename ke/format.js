@@ -1,6 +1,6 @@
-// Mise en forme Discord des données de Kerrigan's Eyes.
-//  - évènements (session lancée, nouveau bot...) : une phrase simple
-//  - /status, /sessions, récap : des cartes aérées, sur plusieurs messages si besoin
+// Discord formatting of the Kerrigan's Eyes data.
+//  - events (session started, new bot...): one simple sentence
+//  - /status, /sessions, recaps: airy cards, over several messages when needed
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js')
 
 const COLORS = {
@@ -8,26 +8,24 @@ const COLORS = {
 }
 
 const STATUS = {
-  running: { icon: '▶️', label: 'En cours', color: COLORS.start },
-  paused: { icon: '⏸️', label: 'En pause', color: COLORS.stop },
-  stopped: { icon: '⏹️', label: 'Arrêtée', color: COLORS.stop },
-  completed: { icon: '✅', label: 'Terminée', color: COLORS.end },
-  completed_with_errors: { icon: '⚠️', label: 'Terminée avec erreurs', color: COLORS.warn }
+  running: { icon: '▶️', label: 'Running', color: COLORS.start },
+  paused: { icon: '⏸️', label: 'Paused', color: COLORS.stop },
+  stopped: { icon: '⏹️', label: 'Stopped', color: COLORS.stop },
+  completed: { icon: '✅', label: 'Finished', color: COLORS.end },
+  completed_with_errors: { icon: '⚠️', label: 'Finished with errors', color: COLORS.warn }
 }
-// genre et nom de chaque type de session, pour les phrases ("Un duel vient d'être lancé")
 const MODES = {
-  training: { icon: '🧪', label: 'Training', noun: 'training', un: 'Un', e: '', le: 'le' },
-  duel: { icon: '⚖️', label: 'Duel', noun: 'duel', un: 'Un', e: '', le: 'le' },
-  battle: { icon: '🏆', label: 'Battle', noun: 'battle', un: 'Une', e: 'e', le: 'la' }
+  training: { icon: '🧪', label: 'Training', noun: 'training', a: 'A' },
+  duel: { icon: '⚖️', label: 'Duel', noun: 'duel', a: 'A' },
+  battle: { icon: '🏆', label: 'Battle', noun: 'battle', a: 'A' }
 }
-const RACES = { t: 'Terran', z: 'Zerg', p: 'Protoss', r: 'Random', terran: 'Terran', zerg: 'Zerg', protoss: 'Protoss', random: 'Random' }
 
 const st = s => STATUS[s] || { icon: '•', label: s || '?', color: COLORS.brand }
 const md = m => MODES[m || 'training'] || { ...MODES.training, icon: '•', label: m, noun: m }
 const isEnded = s => s === 'completed' || s === 'completed_with_errors'
-const num = n => Number(n || 0).toLocaleString('fr-FR')
+const num = n => Number(n || 0).toLocaleString('en-US')
 const isHttp = u => /^https?:\/\//.test(u || '')
-const plural = (n, one, many) => `${num(n)} ${Number(n) > 1 ? many : one}`
+const plural = (n, one, many) => `${num(n)} ${Number(n) === 1 ? one : many}`
 
 function parseIso (iso) {
   if (!iso) return NaN
@@ -45,7 +43,7 @@ function duration (fromIso, toIso) {
   const m = Math.round(ms / 60000)
   const d = Math.floor(m / 1440)
   const h = Math.floor((m % 1440) / 60)
-  return [d ? `${d} j` : '', h ? `${h} h` : '', m % 60 || (!d && !h) ? `${m % 60} min` : ''].filter(Boolean).slice(0, 2).join(' ')
+  return [d ? `${d} d` : '', h ? `${h} h` : '', m % 60 || (!d && !h) ? `${m % 60} min` : ''].filter(Boolean).slice(0, 2).join(' ')
 }
 
 /** ▰▰▰▰▰▱▱▱▱▱ */
@@ -59,19 +57,19 @@ const running = e => (e.running_games || 0) + (e.finishing_games || 0)
 const done = e => (e.completed_games || 0) + (e.failed_games || 0)
 const percent = e => (e.total_games ? Math.floor((100 * done(e)) / e.total_games) : 0)
 const runUrl = (cfg, id) => (isHttp(cfg.publicUrl) ? `${cfg.publicUrl}/campaign/${id}` : null)
-// lien sans aperçu de site (les chevrons empêchent Discord d'afficher la page de KE sous le message)
+// link without a site preview (the angle brackets stop Discord from showing the KE page under the message)
 const link = (text, url) => (url ? `[${text}](<${url}>)` : text)
 
-/** Bouton "Ouvrir dans KE" (aucun si KE_PUBLIC_URL n'est pas une adresse http(s)). */
+/** "Open in KE" button (none when KE_PUBLIC_URL is not an http(s) address). */
 function linkRows (cfg, id) {
   const url = runUrl(cfg, id)
   if (!url) return []
-  return [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Ouvrir dans KE').setEmoji('🔗').setStyle(ButtonStyle.Link).setURL(url))]
+  return [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Open in KE').setEmoji('🔗').setStyle(ButtonStyle.Link).setURL(url))]
 }
 
-// ---------------------------------------------------------------- évènements : une phrase
+// ---------------------------------------------------------------- events: one sentence
 
-/** Texte du message pour un évènement de KE (null : évènement inconnu ou incomplet). */
+/** Message text for a KE event (null: unknown or incomplete event). */
 function eventText (cfg, event, data = {}) {
   const s = data.session
   if (event.startsWith('session.') && !s) return null
@@ -79,37 +77,37 @@ function eventText (cfg, event, data = {}) {
   const name = s ? `**${link(s.name, runUrl(cfg, s.id))}**` : ''
   switch (event) {
     case 'ping':
-      return "🔗 Webhook Kerrigan's Eyes connecté : les évènements du labo arriveront dans ce salon."
+      return "🔗 Kerrigan's Eyes webhook connected: the lab events will be posted in this channel."
     case 'session.started':
-      return `▶️ ${m.un} ${m.noun} vient d'être lancé${m.e} : ${name}`
+      return `▶️ ${m.a} ${m.noun} has just been started: ${name}`
     case 'session.resumed':
-      return `🔁 ${m.un} ${m.noun} vient de reprendre : ${name}`
+      return `🔁 ${m.a} ${m.noun} has just been resumed: ${name}`
     case 'session.stopped':
-      return `⏹️ ${m.un} ${m.noun} vient d'être arrêté${m.e} : ${name}`
+      return `⏹️ ${m.a} ${m.noun} has just been stopped: ${name}`
     case 'session.ended':
       return s.status === 'completed_with_errors'
-        ? `⚠️ ${m.un} ${m.noun} vient de se terminer avec des erreurs : ${name} (${plural(s.failed_games, 'game en échec', 'games en échec')})`
-        : `✅ ${m.un} ${m.noun} vient de se terminer : ${name}`
+        ? `⚠️ ${m.a} ${m.noun} has just finished with errors: ${name} (${plural(s.failed_games, 'failed game', 'failed games')})`
+        : `✅ ${m.a} ${m.noun} has just finished: ${name}`
     case 'session.processed':
-      return `🔬 Analyses et rendus 2D terminés pour ${m.le} ${m.noun} ${name}`
+      return `🔬 Analyses and 2D renders done for the ${m.noun} ${name}`
     case 'bot.added': {
       const b = data.bot
-      return b ? `🤖 Un nouveau bot vient d'être ajouté : **${b.display || b.name}**` : null
+      return b ? `🤖 A new bot has just been added: **${b.display || b.name}**` : null
     }
     case 'bot.version_added': {
       const b = data.bot
-      return b ? `🆕 Une nouvelle version de **${b.name}** vient d'être ajoutée : **${b.version || b.display}**` : null
+      return b ? `🆕 A new version of **${b.name}** has just been added: **${b.version || b.display}**` : null
     }
     case 'map.added':
-      return data.map ? `🗺️ Une nouvelle map vient d'être ajoutée : **${data.map.name}**` : null
+      return data.map ? `🗺️ A new map has just been added: **${data.map.name}**` : null
     default:
       return null
   }
 }
 
-// ---------------------------------------------------------------- statut du labo
+// ---------------------------------------------------------------- lab status
 
-function statusEmbed (cfg, s, title = '📊 État du labo') {
+function statusEmbed (cfg, s, title = '📊 Lab status') {
   const exps = s.experiments || []
   const sum = k => exps.reduce((n, e) => n + (e[k] || 0), 0)
   const auto = s.auto || {}
@@ -128,23 +126,23 @@ function statusEmbed (cfg, s, title = '📊 État du labo') {
 
   const lines = []
   if (auto.auto_status) lines.push(`*${auto.auto_status}*`, '')
-  if (s.docker && s.docker.ok === false) lines.push('⚠️ Docker injoignable depuis KE', '')
-  if (s.reset && s.reset.running) lines.push('⚠️ Réinitialisation du labo en cours', '')
+  if (s.docker && s.docker.ok === false) lines.push('⚠️ Docker is unreachable from KE', '')
+  if (s.reset && s.reset.running) lines.push('⚠️ Lab reset in progress', '')
   lines.push(
     '**🎮  Games**',
-    `> **${num(sum('running_games'))}** en cours${finishing ? ` (+${num(finishing)} en finition)` : ''} · **${num(queued)}** en file · max ${s.max_parallel_matches ?? '?'} en parallèle`,
-    `> ⚡ ${s.throughput && s.throughput.per_hour != null ? `**${s.throughput.per_hour}** games / heure` : 'pas de game terminée cette dernière heure'}`,
+    `> **${num(sum('running_games'))}** running${finishing ? ` (+${num(finishing)} finishing)` : ''} · **${num(queued)}** queued · up to ${s.max_parallel_matches ?? '?'} in parallel`,
+    `> ⚡ ${s.throughput && s.throughput.per_hour != null ? `**${s.throughput.per_hour}** games / hour` : 'no game finished in the last hour'}`,
     '',
-    '**🔬  Post-traitement**',
-    `> Analyses : **${len(rep.running)}** en cours · ${num(rep.pending)} en attente`,
-    `> Rendus 2D : **${len(mov.running)}** en cours · ${num(mov.pending)} en attente`,
+    '**🔬  Processing**',
+    `> Analyses: **${len(rep.running)}** running · ${num(rep.pending)} waiting`,
+    `> 2D renders: **${len(mov.running)}** running · ${num(mov.pending)} waiting`,
     '',
     '**📋  Sessions**',
-    `> **${active.length}** en cours · ${paused.length} en pause · ${exps.filter(e => isEnded(e.status)).length} terminée(s)`,
+    `> **${active.length}** running · ${paused.length} paused · ${exps.filter(e => isEnded(e.status)).length} finished`,
     '',
     '**🖥️  Machine**',
-    `> ${level(cpu)} CPU  \`${bar(cpu)}\`  **${cpu ?? '…'} %**${auto.cpus ? ` · ${auto.cpus} cœurs` : ''}`,
-    `> ${level(mem)} RAM  \`${bar(mem)}\`  **${mem ?? '…'} %** · ${gb(memUsed)} / ${gb(auto.mem_total)} Go`
+    `> ${level(cpu)} CPU  \`${bar(cpu)}\`  **${cpu ?? '…'} %**${auto.cpus ? ` · ${auto.cpus} cores` : ''}`,
+    `> ${level(mem)} RAM  \`${bar(mem)}\`  **${mem ?? '…'} %** · ${gb(memUsed)} / ${gb(auto.mem_total)} GB`
   )
   const embed = new EmbedBuilder()
     .setColor(worst >= 90 ? COLORS.error : worst >= 70 ? COLORS.warn : COLORS.brand)
@@ -155,13 +153,13 @@ function statusEmbed (cfg, s, title = '📊 État du labo') {
   return embed
 }
 
-// ---------------------------------------------------------------- sessions : une carte chacune
+// ---------------------------------------------------------------- sessions: one card each
 
 function subjects (e) {
-  if (e.mode === 'battle') return `${e.bots_count} bots en round-robin`
+  if (e.mode === 'battle') return `${e.bots_count} bots, round-robin`
   if (e.mode === 'duel') return `**${e.subject_name}** vs **${e.subject2_name || '?'}**`
   const n = Math.max(0, (e.bots_count || 1) - 1)
-  return `**${e.subject_name}** vs ${plural(n, 'adversaire', 'adversaires')}`
+  return `**${e.subject_name}** vs ${plural(n, 'opponent', 'opponents')}`
 }
 
 function sessionCard (cfg, e) {
@@ -172,22 +170,23 @@ function sessionCard (cfg, e) {
     '',
     `\`${bar(percent(e), 16)}\`  **${percent(e)} %**  ·  ${num(done(e))} / ${num(e.total_games)} games`,
     '',
-    `✅ **${num(e.completed_games)}** finies  ·  ❌ **${num(e.failed_games)}** en échec`
+    `✅ **${num(e.completed_games)}** finished  ·  ❌ **${num(e.failed_games)}** failed`
   ]
   if (!isEnded(e.status)) {
-    lines.push(`▶️ **${num(running(e))}** en cours  ·  ⏳ **${num(e.queued_games)}** en file`)
-    if (e.status === 'running' && e.throughput && e.throughput.per_hour != null) lines.push(`⚡ **${e.throughput.per_hour}** games / heure`)
+    lines.push(`▶️ **${num(running(e))}** running  ·  ⏳ **${num(e.queued_games)}** queued`)
+    if (e.status === 'running' && e.throughput && e.throughput.per_hour != null) lines.push(`⚡ **${e.throughput.per_hour}** games / hour`)
     if (e.rounds_total > 1) lines.push(`🔁 Round **${e.round_current || e.rounds_total}** / ${e.rounds_total}`)
   }
   if (isEnded(e.status)) {
     const pending = (e.analysing_games || 0) + (e.rendering_games || 0)
     lines.push('', pending
-      ? `🔬 Post-traitement : **${num(e.analysing_games)}** analyse(s) et **${num(e.rendering_games)}** rendu(s) 2D en attente`
-      : '🔬 Post-traitement terminé')
+      ? `🔬 Processing: **${num(e.analysing_games)}** ${Number(e.analysing_games) === 1 ? 'analysis' : 'analyses'} and **${num(e.rendering_games)}** 2D ${Number(e.rendering_games) === 1 ? 'render' : 'renders'} waiting`
+      : '🔬 Processing done')
   }
+  const took = duration(e.created_at, e.finished_at)
   const when = isEnded(e.status) && e.finished_at
-    ? `Terminée ${ts(e.finished_at)}${duration(e.created_at, e.finished_at) ? ` · durée ${duration(e.created_at, e.finished_at)}` : ''}`
-    : `Créée ${ts(e.created_at)}`
+    ? `Finished ${ts(e.finished_at)}${took ? ` · took ${took}` : ''}`
+    : `Created ${ts(e.created_at)}`
   lines.push('', `-# #${e.id} · ${when}`)
   const embed = new EmbedBuilder()
     .setColor(s.color)
@@ -213,14 +212,14 @@ function countsLine (all) {
     .filter(([, n]) => n).map(([v, n]) => `${v.icon} ${n} ${v.label.toLowerCase()}`).join('  ·  ')
 }
 
-/** Une carte par session, 5 par message (les actives d'abord). Renvoie une liste de messages. */
+/** One card per session, 5 per message (active ones first). Returns a list of messages. */
 function sessionsMessages (cfg, s, filter = 'all', limit = 10, header = '📋 **Sessions**') {
   const all = s.experiments || []
   const list = all.filter(FILTERS[filter] || FILTERS.all)
   const shown = [...list].sort((a, b) => ORDER(a) - ORDER(b) || b.id - a.id).slice(0, Math.min(limit, 25))
-  const more = list.length > shown.length ? `\n-# ${shown.length} sur ${list.length} affichées` : ''
+  const more = list.length > shown.length ? `\n-# ${shown.length} of ${list.length} shown` : ''
   const head = `${header}${all.length ? `\n${countsLine(all)}` : ''}${more}`
-  if (!shown.length) return [{ content: `${head}\n\n*Aucune session.*` }]
+  if (!shown.length) return [{ content: `${head}\n\n*No session.*` }]
   const out = []
   for (let i = 0; i < shown.length; i += 5) {
     out.push({ content: i === 0 ? head : undefined, embeds: shown.slice(i, i + 5).map(e => sessionCard(cfg, e)) })
@@ -228,19 +227,19 @@ function sessionsMessages (cfg, s, filter = 'all', limit = 10, header = '📋 **
   return out
 }
 
-// ---------------------------------------------------------------- récap planifié
+// ---------------------------------------------------------------- scheduled recap
 
-const DAYS_FR = { daily: 'tous les jours', mon: 'lundi', tue: 'mardi', wed: 'mercredi', thu: 'jeudi', fri: 'vendredi', sat: 'samedi', sun: 'dimanche' }
+const DAYS = { daily: 'every day', mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' }
 
-/** "samedi 17h30 · lundi 09h00" (au-delà de 3 horaires : "5 horaires") */
+/** "Saturday 17:30 · Monday 09:00" (more than 3 times: "5 times") */
 function scheduleLabel (schedule) {
   const list = Array.isArray(schedule) ? schedule : []
   if (!list.length) return ''
-  if (list.length > 3) return `${list.length} horaires`
-  return list.map(sl => `${DAYS_FR[sl.day] || sl.day} ${String(sl.time).replace(':', 'h')}`).join(' · ')
+  if (list.length > 3) return `${list.length} times`
+  return list.map(sl => `${DAYS[sl.day] || sl.day} ${sl.time}`).join(' · ')
 }
 
-/** Récap : un message d'état du labo, puis les sessions (actives + 5 dernières terminées). */
+/** Recap: one lab status message, then the sessions (active ones + the last 5 finished). */
 function recapMessages (cfg, state, schedule) {
   const label = scheduleLabel(schedule)
   const exps = state.experiments || []
@@ -248,8 +247,8 @@ function recapMessages (cfg, state, schedule) {
   const ended = exps.filter(e => isEnded(e.status)).sort((a, b) => b.id - a.id).slice(0, 5)
   const picked = { ...state, experiments: [...active, ...ended] }
   return [
-    { content: `## 🗞️ Récap Kerrigan's Eyes${label ? `\n-# ${label}` : ''}`, embeds: [statusEmbed(cfg, state, '📊 État du labo')] },
-    ...sessionsMessages(cfg, picked, 'all', 25, '📋 **Sessions en cours et dernières terminées**')
+    { content: `## 🗞️ Kerrigan's Eyes recap${label ? `\n-# ${label}` : ''}`, embeds: [statusEmbed(cfg, state, '📊 Lab status')] },
+    ...sessionsMessages(cfg, picked, 'all', 25, '📋 **Running sessions and the last finished ones**')
   ]
 }
 

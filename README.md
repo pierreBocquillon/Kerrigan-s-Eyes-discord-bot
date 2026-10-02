@@ -1,48 +1,49 @@
-# Kerrigan's Eyes — bot Discord
+# Kerrigan's Eyes — Discord bot
 
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-8b5cf6)](LICENSE)
 
-Bot Discord de **Kerrigan's Eyes**. L'intégration est optionnelle : elle n'est active que si `KE_URL` est défini dans `.env`
-(sinon le bot se connecte mais n'a aucune commande).
+Discord bot for **Kerrigan's Eyes**. The integration is optional: it is only enabled when `KE_URL` is set in `.env`
+(otherwise the bot signs in but has no command).
 
 ## Notifications (webhooks)
 
-Kerrigan's Eyes **appelle le bot** quand quelque chose se passe : aucun sondage, aucune requête inutile.
-Le bot reçoit les évènements sur `POST /webhooks/ke` (port `PORT`) et les poste dans le salon `KE_CHANNEL_ID` :
+Kerrigan's Eyes **calls the bot** when something happens: no polling, no useless request.
+The bot receives the events on `POST /webhooks/ke` (port `PORT`, path `KE_WEBHOOK_PATH`) and posts them in the `KE_CHANNEL_ID` channel:
 
-| Évènement KE | Message |
+| KE event | Message |
 |---|---|
-| `session.started` / `session.resumed` / `session.stopped` | ▶️ « Un duel vient d'être lancé : **Nom du duel** » (reprise, arrêt de la même façon) |
-| `session.ended` | ✅ « Un training vient de se terminer : **Nom** » (⚠️ avec le nombre de games en échec) |
-| `session.processed` | 🔬 « Analyses et rendus 2D terminés pour le duel **Nom** » |
-| `bot.added` / `bot.version_added` | 🤖 « Un nouveau bot vient d'être ajouté : **Nom** » / 🆕 nouvelle version |
-| `map.added` | 🗺️ « Une nouvelle map vient d'être ajoutée : **Nom** » |
-| `lab.recap` (récap planifié dans KE : jours + heures, ex. samedi 17h30 et lundi 9h, ou tous les jours) | 🗞️ un message « État du labo », puis une carte par session (en cours + 5 dernières terminées) |
-| `ping` (bouton *Test* dans KE) | 🔗 Webhook connecté |
+| `session.started` / `session.resumed` / `session.stopped` | ▶️ "A duel has just been started: **Duel name**" (same for resumed / stopped) |
+| `session.ended` | ✅ "A training has just finished: **Name**" (⚠️ with the number of failed games) |
+| `session.processed` | 🔬 "Analyses and 2D renders done for the duel **Name**" |
+| `bot.added` / `bot.version_added` | 🤖 "A new bot has just been added: **Name**" / 🆕 new version |
+| `map.added` | 🗺️ "A new map has just been added: **Name**" |
+| `lab.recap` (recap scheduled in KE: days + times, e.g. Saturday 17:30 and Monday 09:00, or every day) | 🗞️ a "Lab status" message, then one card per session (running ones + the last 5 finished) |
+| `ping` (*Test* button in KE) | 🔗 Webhook connected |
 
-Chaque appel est signé (`X-KE-Signature` = HMAC-SHA256 de `timestamp.corps` avec le secret) : le bot refuse
-tout appel non signé ou trop ancien (> 5 min). Si Discord échoue, le bot répond une erreur et KE réessaie.
+Every call is signed (`X-KE-Signature` = HMAC-SHA256 of `timestamp.body` with the secret): the bot refuses
+any unsigned or too old call (> 5 min). When Discord fails, the bot answers an error and KE retries.
 
-## Commandes
+## Commands
 
-- `/status` — games en cours, analyses et rendus 2D (en cours / en attente), CPU, RAM, débit.
-- `/sessions` (alias `/campaigns`) — une carte par session : statut, avancement, finies / en échec / en cours / en file,
-  5 cartes par message (plusieurs messages si besoin). Options : `filtre`, `limite`, `id`.
+- `/status` — running games, analyses and 2D renders (running / waiting), CPU, RAM, games per hour.
+- `/sessions` (same as `/campaigns`) — one card per session: status, progress, finished / failed / running / queued games,
+  5 cards per message (several messages when needed). Options: `filter`, `limit`, `id`.
 
-Ces commandes lisent l'API de KE au moment où elles sont lancées, avec le compte `KE_USERNAME` (un compte **guest** suffit).
+These commands read the KE API when they are run, with the `KE_USERNAME` account (a **guest** account is enough).
 
-## Mise en place
+## Setup
 
-1. `.env` (voir `.env.example`) : `KE_URL`, `KE_PUBLIC_URL`, `KE_USERNAME`, `KE_PASSWORD`, `KE_CHANNEL_ID`.
-2. Lance le bot : `docker compose up --build -d`. Son port `PORT` doit être joignable par le serveur de KE.
-3. Dans KE : **Settings > Webhooks > Add a webhook**, URL `http(s)://<adresse du bot>:<PORT>/webhooks/ke`.
-4. Copie le secret affiché par KE dans `KE_WEBHOOK_SECRET` (`.env`), puis redémarre le bot.
-5. Bouton **Test** (▶) dans KE : le message « Webhook connecté » doit apparaître dans le salon.
+1. `.env` (see `.env.example`): `KE_URL`, `KE_PUBLIC_URL`, `KE_USERNAME`, `KE_PASSWORD`, `KE_CHANNEL_ID`.
+2. Start the bot: `docker compose up --build -d`. Its `PORT` must be reachable from the KE server.
+3. In KE: **Settings > Webhooks > Add a webhook**, URL `http(s)://<bot address>:<PORT>/webhooks/ke`
+   (or the bot's root URL with `KE_WEBHOOK_PATH=/`).
+4. Copy the secret shown by KE into `KE_WEBHOOK_SECRET` (`.env`), then restart the bot.
+5. **Test** button (▶) in KE: the "webhook connected" message must show up in the channel.
 
-Si le bot et KE tournent sur la même machine en Docker, l'URL peut être `http://host.docker.internal:<PORT>/webhooks/ke`
-(ou le nom du conteneur du bot si les deux sont sur le même réseau Docker).
+When the bot and KE run on the same machine with Docker, the URL can be `http://host.docker.internal:<PORT>/webhooks/ke`
+(or the bot container name when both are on the same Docker network).
 
-## Licence
+## License
 
-© 2026 T&T. Tous droits réservés. Sous licence [PolyForm Noncommercial License 1.0.0](LICENSE) (la même que Kerrigan's Eyes) :
-utilisation, modification et partage autorisés **pour tout usage non commercial**. **Tout usage commercial nécessite une licence séparée de T&T.**
+© 2026 T&T. All rights reserved. Licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE) (the same as Kerrigan's Eyes):
+you may use, modify and share this software **for any noncommercial purpose**. **Commercial use requires a separate license from T&T.**

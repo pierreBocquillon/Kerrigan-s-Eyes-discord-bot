@@ -1,4 +1,4 @@
-// Évènements envoyés par Kerrigan's Eyes (webhooks) -> messages dans le salon configuré.
+// Events sent by Kerrigan's Eyes (webhooks) -> messages in the configured channel.
 const fmt = require('./format')
 
 class Notifier {
@@ -8,10 +8,10 @@ class Notifier {
   }
 
   async channel () {
-    if (!this.cfg.channelId) throw new Error('KE_CHANNEL_ID non défini')
+    if (!this.cfg.channelId) throw new Error('KE_CHANNEL_ID is not set')
     if (!this._channel) {
       const ch = await this.client.channels.fetch(this.cfg.channelId)
-      if (!ch || !ch.isTextBased()) throw new Error(`KE_CHANNEL_ID ${this.cfg.channelId} n'est pas un salon textuel`)
+      if (!ch || !ch.isTextBased()) throw new Error(`KE_CHANNEL_ID ${this.cfg.channelId} is not a text channel`)
       this._channel = ch
     }
     return this._channel
@@ -21,7 +21,7 @@ class Notifier {
     return (await this.channel()).send({ allowedMentions: { parse: [] }, ...payload })
   }
 
-  /** Traite un évènement ; lève une erreur si un message n'a pas pu être posté (KE renverra l'évènement). */
+  /** Handles one event; throws when a message could not be posted (KE will send the event again). */
   async handle (event, data = {}) {
     if (event === 'lab.recap') {
       if (!data.state) return false
@@ -29,7 +29,7 @@ class Notifier {
       return true
     }
     const text = fmt.eventText(this.cfg, event, data)
-    if (!text) return false // évènement inconnu (version plus récente de KE) : ignoré
+    if (!text) return false // unknown event (newer KE version): ignored
     await this.send({ content: text })
     return true
   }

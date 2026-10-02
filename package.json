@@ -8,7 +8,7 @@
   "keywords": [],
   "author": "T&T",
   "license": "PolyForm-Noncommercial-1.0.0",
-  "description": "Bot Discord de Kerrigan's Eyes",
+  "description": "Discord bot for Kerrigan's Eyes",
   "dependencies": {
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
