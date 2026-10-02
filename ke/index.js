@@ -73,12 +73,15 @@ function setup (client, env = process.env) {
         await interaction.editReply(`❓ Session #${id} introuvable (KE liste les 100 plus récentes).`)
         return true
       }
-      await interaction.editReply({ embeds: [fmt.sessionEmbed(cfg, e, 'info')], components: fmt.linkRows(cfg, e.id) })
+      await interaction.editReply({ embeds: [fmt.sessionCard(cfg, e)], components: fmt.linkRows(cfg, e.id) })
       return true
     }
     const filter = interaction.options.getString('filtre') || 'all'
     const limit = interaction.options.getInteger('limite') || 10
-    await interaction.editReply({ embeds: [fmt.sessionsEmbed(cfg, s, filter, limit)] })
+    const [first, ...rest] = fmt.sessionsMessages(cfg, s, filter, limit,
+      interaction.commandName === 'campaigns' ? '📋 **Campagnes**' : '📋 **Sessions**')
+    await interaction.editReply(first)
+    for (const msg of rest) await interaction.followUp(msg)
     return true
   }
 

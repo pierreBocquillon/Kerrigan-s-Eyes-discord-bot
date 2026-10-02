@@ -27,8 +27,6 @@ function loadConfig (env = process.env) {
     // webhook appelé par KE (Settings > Webhooks) : chemin sur le serveur HTTP du bot et secret partagé
     webhookPath: webhookPath(env.KE_WEBHOOK_PATH),
     webhookSecret: env.KE_WEBHOOK_SECRET || '',
-    // messages de fin de session (mis à jour quand le post-traitement est terminé)
-    stateFile: env.KE_STATE_FILE || './data/ke-messages.json',
     roleId: env.KE_ROLE_ID || ''
   }
 }

@@ -12,14 +12,13 @@ Le bot reçoit les évènements sur `POST /webhooks/ke` (port `PORT`) et les pos
 
 | Évènement KE | Message |
 |---|---|
-| `session.started` / `session.resumed` | ▶️ nom, type (training / duel / battle), bots, avancement |
-| `session.stopped` | ⏹️ |
-| `session.ended` | ✅ / ⚠️ résultat final + analyses / rendus 2D restants |
-| `session.processed` | met à jour le message de fin quand analyses et rendus 2D sont terminés |
-| `bot.added` / `bot.version_added` | 🤖 / 🆕 |
-| `map.added` | 🗺️ |
+| `session.started` / `session.resumed` / `session.stopped` | ▶️ « Un duel vient d'être lancé : **Nom du duel** » (reprise, arrêt de la même façon) |
+| `session.ended` | ✅ « Un training vient de se terminer : **Nom** » (⚠️ avec le nombre de games en échec) |
+| `session.processed` | 🔬 « Analyses et rendus 2D terminés pour le duel **Nom** » |
+| `bot.added` / `bot.version_added` | 🤖 « Un nouveau bot vient d'être ajouté : **Nom** » / 🆕 nouvelle version |
+| `map.added` | 🗺️ « Une nouvelle map vient d'être ajoutée : **Nom** » |
+| `lab.recap` (récap planifié dans KE : jours + heures, ex. samedi 17h30 et lundi 9h, ou tous les jours) | 🗞️ un message « État du labo », puis une carte par session (en cours + 5 dernières terminées) |
 | `ping` (bouton *Test* dans KE) | 🔗 Webhook connecté |
-| `lab.recap` (récap planifié dans KE : jours + heures, ex. samedi 17h30 et lundi 9h, ou tous les jours) | 🗞️ statut du labo (games, analyses, rendus, CPU, RAM) + liste des sessions |
 
 Chaque appel est signé (`X-KE-Signature` = HMAC-SHA256 de `timestamp.corps` avec le secret) : le bot refuse
 tout appel non signé ou trop ancien (> 5 min). Si Discord échoue, le bot répond une erreur et KE réessaie.
@@ -27,8 +26,8 @@ tout appel non signé ou trop ancien (> 5 min). Si Discord échoue, le bot répo
 ## Commandes
 
 - `/status` — games en cours, analyses et rendus 2D (en cours / en attente), CPU, RAM, débit.
-- `/sessions` (alias `/campaigns`) — liste des sessions avec statut et avancement
-  (`155 finished · 2 failed · 5 running · 15 queued`). Options : `filtre`, `limite`, `id`.
+- `/sessions` (alias `/campaigns`) — une carte par session : statut, avancement, finies / en échec / en cours / en file,
+  5 cartes par message (plusieurs messages si besoin). Options : `filtre`, `limite`, `id`.
 
 Ces commandes lisent l'API de KE au moment où elles sont lancées, avec le compte `KE_USERNAME` (un compte **guest** suffit).
 
