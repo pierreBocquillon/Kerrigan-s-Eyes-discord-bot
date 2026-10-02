@@ -1,7 +1,6 @@
 // Évènements envoyés par Kerrigan's Eyes (webhooks) -> messages dans le salon configuré.
 const fs = require('fs')
 const path = require('path')
-const { EmbedBuilder } = require('discord.js')
 const fmt = require('./format')
 
 const KINDS = { 'session.started': 'start', 'session.resumed': 'resume', 'session.stopped': 'stop' }
@@ -53,7 +52,7 @@ class Notifier {
     const s = data.session
     switch (event) {
       case 'ping':
-        await this.send({ embeds: [new EmbedBuilder().setColor(fmt.COLORS.end).setTitle('🔗 Webhook Kerrigan\'s Eyes connecté').setDescription('Les évènements du labo arriveront dans ce salon.').setTimestamp(new Date())] })
+        await this.send({ embeds: [fmt.pingEmbed(this.cfg)] })
         return true
       case 'session.started':
       case 'session.resumed':
@@ -82,22 +81,21 @@ class Notifier {
             // message supprimé : on en poste un nouveau
           }
         }
-        await this.send({
-          embeds: [new EmbedBuilder().setColor(fmt.COLORS.end).setTitle(`🔬 Post-traitement terminé — #${s.id} ${s.name}`.slice(0, 256))
-            .setDescription(`${s.reports_done} rapport(s) · ${s.movies_done} rendu(s) 2D${s.post_failed_games ? ` · ❌ ${s.post_failed_games} échec(s)` : ''}`)
-            .setTimestamp(new Date())],
-          components: fmt.linkRows(this.cfg, s.id)
-        })
+        await this.send({ embeds: [fmt.processedEmbed(this.cfg, s)], components: fmt.linkRows(this.cfg, s.id) })
         return true
       }
       case 'bot.added':
       case 'bot.version_added':
         if (!data.bot) return false
-        await this.send({ embeds: [fmt.botEmbed({ ...data.bot, family_id: event === 'bot.version_added' ? -1 : data.bot.id })] })
+        await this.send({ embeds: [fmt.botEmbed(this.cfg, data.bot, event === 'bot.version_added')] })
         return true
       case 'map.added':
         if (!data.map) return false
-        await this.send({ embeds: [fmt.mapEmbed(data.map)] })
+        await this.send({ embeds: [fmt.mapEmbed(this.cfg, data.map)] })
+        return true
+      case 'lab.recap':
+        if (!data.state) return false
+        await this.send({ embeds: fmt.recapEmbeds(this.cfg, data.state, data.schedule) })
         return true
       default:
         return false // évènement inconnu (version plus récente de KE) : ignoré

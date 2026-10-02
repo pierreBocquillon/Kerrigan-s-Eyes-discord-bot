@@ -19,6 +19,7 @@ Le bot reçoit les évènements sur `POST /webhooks/ke` (port `PORT`) et les pos
 | `bot.added` / `bot.version_added` | 🤖 / 🆕 |
 | `map.added` | 🗺️ |
 | `ping` (bouton *Test* dans KE) | 🔗 Webhook connecté |
+| `lab.recap` (récap planifié dans KE : jours + heures, ex. samedi 17h30 et lundi 9h, ou tous les jours) | 🗞️ statut du labo (games, analyses, rendus, CPU, RAM) + liste des sessions |
 
 Chaque appel est signé (`X-KE-Signature` = HMAC-SHA256 de `timestamp.corps` avec le secret) : le bot refuse
 tout appel non signé ou trop ancien (> 5 min). Si Discord échoue, le bot répond une erreur et KE réessaie.
