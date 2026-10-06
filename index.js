@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits, REST, Routes, MessageFlags } = require('disco
 require('dotenv').config()
 
 const kerrigan = require('./ke')
+const clear = require('./commands/clear')
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
@@ -18,7 +19,7 @@ ke.mountWebhook(app) // POST /webhooks/ke (or KE_WEBHOOK_PATH): events sent by K
 app.listen(PORT, () => console.log(`🌐 HTTP server listening on port ${PORT}`))
 
 // this list replaces the commands previously registered on Discord
-const commands = ke.commands.map(c => c.toJSON())
+const commands = [clear.data.toJSON(), ...ke.commands.map(c => c.toJSON())]
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 
@@ -58,7 +59,8 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return
 
   try {
-    await ke.handleCommand(interaction)
+    if (interaction.commandName === clear.data.name) await clear.execute(interaction)
+    else await ke.handleCommand(interaction)
   } catch (error) {
     console.error(error)
     await replyError(interaction)

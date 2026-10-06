@@ -212,18 +212,55 @@ function countsLine (all) {
     .filter(([, n]) => n).map(([v, n]) => `${v.icon} ${n} ${v.label.toLowerCase()}`).join('  ·  ')
 }
 
-/** One card per session, 5 per message (active ones first). Returns a list of messages. */
-function sessionsMessages (cfg, s, filter = 'all', limit = 10, header = '📋 **Sessions**') {
+/** Finished session in a list: just its name, when it finished and how long it took. */
+function endedLine (cfg, e) {
+  const took = duration(e.created_at, e.finished_at)
+  return `${st(e.status).icon} **${link(e.name, runUrl(cfg, e.id))}**\n-# Finished ${ts(e.finished_at)}${took ? ` · took ${took}` : ''}`
+}
+
+/** Short lines of finished sessions, in one card (several when very long). */
+function endedEmbeds (cfg, ended, title) {
+  const out = []
+  let lines = []
+  const flush = () => {
+    if (!lines.length) return
+    out.push(new EmbedBuilder().setColor(COLORS.end).setTitle(out.length ? `${title} (more)` : title).setDescription(lines.join('\n\n')))
+    lines = []
+  }
+  for (const e of ended) {
+    const line = endedLine(cfg, e)
+    if (lines.join('\n\n').length + line.length + 2 > 3800) flush()
+    lines.push(line)
+  }
+  flush()
+  return out
+}
+
+/**
+ * Running / paused sessions: one card each, 5 per message. Finished sessions: short lines (name, finished, took).
+ * Returns a list of messages.
+ */
+function sessionsMessages (cfg, s, filter = 'all', limit = 10, header = '📋 **Sessions**', endedTitle = '🏁 Finished sessions') {
   const all = s.experiments || []
   const list = all.filter(FILTERS[filter] || FILTERS.all)
   const shown = [...list].sort((a, b) => ORDER(a) - ORDER(b) || b.id - a.id).slice(0, Math.min(limit, 25))
   const more = list.length > shown.length ? `\n-# ${shown.length} of ${list.length} shown` : ''
-  const head = `${header}${all.length ? `\n${countsLine(all)}` : ''}${more}`
-  if (!shown.length) return [{ content: `${head}\n\n*No session.*` }]
+  const head = header ? `${header}${all.length ? `\n${countsLine(all)}` : ''}${more}` : undefined
+  if (!shown.length) return [{ content: `${head || ''}\n\n*No session.*`.trim() }]
+  const active = shown.filter(e => !isEnded(e.status))
+  const ended = shown.filter(e => isEnded(e.status))
   const out = []
-  for (let i = 0; i < shown.length; i += 5) {
-    out.push({ content: i === 0 ? head : undefined, embeds: shown.slice(i, i + 5).map(e => sessionCard(cfg, e)) })
+  for (let i = 0; i < active.length; i += 5) {
+    out.push({ embeds: active.slice(i, i + 5).map(e => sessionCard(cfg, e)) })
   }
+  const endedCards = endedEmbeds(cfg, ended, endedTitle)
+  // the finished ones go with the last cards when there is room (10 embeds per message at most)
+  if (endedCards.length && out.length && out[out.length - 1].embeds.length + endedCards.length <= 10) {
+    out[out.length - 1].embeds.push(...endedCards)
+  } else if (endedCards.length) {
+    out.push({ embeds: endedCards })
+  }
+  if (head) out[0].content = head
   return out
 }
 
@@ -239,17 +276,18 @@ function scheduleLabel (schedule) {
   return list.map(sl => `${DAYS[sl.day] || sl.day} ${sl.time}`).join(' · ')
 }
 
-/** Recap: one lab status message, then the sessions (active ones + the last 5 finished). */
+/** Recap: one lab status message, the running / paused sessions as cards, then the last 5 finished as short lines. */
 function recapMessages (cfg, state, schedule) {
   const label = scheduleLabel(schedule)
   const exps = state.experiments || []
   const active = exps.filter(e => !isEnded(e.status))
   const ended = exps.filter(e => isEnded(e.status)).sort((a, b) => b.id - a.id).slice(0, 5)
-  const picked = { ...state, experiments: [...active, ...ended] }
-  return [
-    { content: `## 🗞️ Kerrigan's Eyes recap${label ? `\n-# ${label}` : ''}`, embeds: [statusEmbed(cfg, state, '📊 Lab status')] },
-    ...sessionsMessages(cfg, picked, 'all', 25, '📋 **Running sessions and the last finished ones**')
-  ]
+  const out = [{ content: `## 🗞️ Kerrigan's Eyes recap${label ? `\n-# ${label}` : ''}`, embeds: [statusEmbed(cfg, state, '📊 Lab status')] }]
+  if (active.length || ended.length) {
+    out.push(...sessionsMessages(cfg, { ...state, experiments: [...active, ...ended] }, 'all', 25,
+      active.length ? '📋 **Running and paused sessions**' : null, '🏁 Last finished sessions'))
+  }
+  return out
 }
 
 module.exports = {

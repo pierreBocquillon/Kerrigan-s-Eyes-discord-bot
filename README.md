@@ -3,7 +3,7 @@
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-8b5cf6)](LICENSE)
 
 Discord bot for **Kerrigan's Eyes**. The integration is optional: it is only enabled when `KE_URL` is set in `.env`
-(otherwise the bot signs in but has no command).
+(otherwise the bot only has the `/clear` command).
 
 ## Notifications (webhooks)
 
@@ -26,10 +26,12 @@ any unsigned or too old call (> 5 min). When Discord fails, the bot answers an e
 ## Commands
 
 - `/status` — running games, analyses and 2D renders (running / waiting), CPU, RAM, games per hour.
-- `/sessions` (same as `/campaigns`) — one card per session: status, progress, finished / failed / running / queued games,
-  5 cards per message (several messages when needed). Options: `filter`, `limit`, `id`.
+- `/sessions` (same as `/campaigns`) — one card per running / paused session: status, progress, finished / failed / running / queued games,
+  5 cards per message (several messages when needed); finished sessions are short lines (name, finished, took). Options: `filter`, `limit`, `id`.
 
-These commands read the KE API when they are run, with the `KE_USERNAME` account (a **guest** account is enough).
+- `/clear` — deletes every message posted by the bot in the current channel (only for members who can manage messages).
+
+`/status`, `/sessions` and `/campaigns` read the KE API when they are run, with the `KE_USERNAME` account (a **guest** account is enough).
 
 ## Setup
 
